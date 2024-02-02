@@ -1,8 +1,8 @@
 from django.urls import path, include
-from api_1.views import *
+from webapp.views import index
 
 app_name = 'webapp'
 
 urlpatterns = [
-
+    path('', index, name='index'),
 ]
