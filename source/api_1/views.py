@@ -1,67 +1,60 @@
-from django.http import JsonResponse, HttpResponse, QueryDict
+from django.http import JsonResponse, HttpResponse, QueryDict, HttpResponseNotAllowed
 from django.shortcuts import render
 import json
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 
-def check_input(dict):
-    a = dict.get('A')
-    b = dict.get('B')
+@ensure_csrf_cookie
+def get_token_view(request, *args, **kwargs):
+    if request.method == 'GET':
+        return HttpResponse()
+    return HttpResponseNotAllowed(['GET'])
 
-    if a is not None and b is not None:
-        try:
-            a = float(a)
-            b = float(b)
-            return a, b
-        except ValueError:
-            raise Exception('A and B must be numeric!')
-    else:
-        raise ValueError('A and B must exist!')
 
+def data_checking(request_body)-> dict[str, str|float]:
+    try:
+        data = json.loads(request_body)
+        data['A'], data['B'] = float(data['A']), float(data['B'])
+    except json.decoder.JSONDecodeError:
+        return {'error': 'Not JSON format'}
+    except KeyError as e:
+        return {'error': f'Data missing {e}'}
+    except ValueError:
+        return {'error': f'Values must be digits'}
+    return data
 
 
 def add_view(request, *args, **kwargs):
-    try:
-        answer = {'A': request.GET.get('A'), 'B': request.GET.get('B')}
-        a, b = check_input(answer)
-        result = {"answer": a + b}
-        return JsonResponse(result, safe=False)
-    except ValueError as ve:
-        return JsonResponse({'error': str(ve)}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    if request.method == 'POST':
+        data = data_checking(request.body)
+        if 'error' in data:
+            return JsonResponse(data, status=400)
+        return JsonResponse({'answer': data['A'] + data['B']}, status=200)
+
 
 
 def subtract_view(request, *args, **kwargs):
-    try:
-        answer = {'A': request.GET.get('A'), 'B': request.GET.get('B')}
-        a, b = check_input(answer)
-        result = {"answer": a - b}
-        return JsonResponse(result, safe=False)
-    except ValueError as ve:
-        return JsonResponse({'error': str(ve)}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    if request.method == 'POST':
+        data = data_checking(request.body)
+        if 'error' in data:
+            return JsonResponse(data, status=400)
+        return JsonResponse({'answer': data['A'] - data['B']}, status=200)
 
 
 def multiply_view(request, *args, **kwargs):
-    try:
-        answer = {'A': request.GET.get('A'), 'B': request.GET.get('B')}
-        a, b = check_input(answer)
-        result = {"answer": a * b}
-        return JsonResponse(result, safe=False)
-    except ValueError as ve:
-        return JsonResponse({'error': str(ve)}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    if request.method == 'POST':
+        data = data_checking(request.body)
+        if 'error' in data:
+            return JsonResponse(data, status=400)
+        return JsonResponse({'answer': data['A'] * data['B']}, status=200)
 
 
 def divide_view(request, *args, **kwargs):
-    try:
-        answer = {'A': request.GET.get('A'), 'B': request.GET.get('B')}
-        a, b = check_input(answer)
-        result = {"answer": a / b}
-        return JsonResponse(result, safe=False)
-    except ValueError as ve:
-        return JsonResponse({'error': str(ve)}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    if request.method == 'POST':
+        data = data_checking(request.body)
+        if 'error' in data:
+            return JsonResponse(data, status=400)
+        try:
+            return JsonResponse({'answer': data['A'] / data['B']}, status=200)
+        except ZeroDivisionError:
+            return JsonResponse({'error': 'Division by zero'}, status=400)
